@@ -1,12 +1,15 @@
 package nl.assignment.product.catalog.service
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import nl.assignment.product.catalog.integration.ExternalPriceClient
 import nl.assignment.product.catalog.repository.ProductRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import java.util.concurrent.Executors
+import kotlin.coroutines.coroutineContext
 
 @Service
 class PriceSyncService(
@@ -25,9 +28,11 @@ class PriceSyncService(
         try {
             log.info("Starting price sync for ${products.size} products...")
 
-            Executors.newVirtualThreadPerTaskExecutor().use { executor ->
+            runBlocking(Dispatchers.Default) {
                 products.forEach { product ->
-                    executor.submit { syncPrice(product.sku, product.price) }
+                    launch {
+                        syncPrice(product.sku, product.price)
+                    }
                 }
             }
 
