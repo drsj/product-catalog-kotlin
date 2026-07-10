@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: product
+
+  datasource:
+    url: jdbc:postgresql://postgres:5432/productdb
+    username: product
+    password: product
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  elasticsearch:
+    uris: http://elasticsearch:9200
+
+pricing:
+  sync:
+    interval-ms: 60000
+
+external:
+  pricing:
+    url: http://pricing-mock-service:9090
+
+logging:
+  level:
+    root: INFO
+    nl.assignment.product: DEBUG

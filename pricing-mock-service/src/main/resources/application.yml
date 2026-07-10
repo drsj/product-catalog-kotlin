@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: pricing-mock
+
+server:
+  port: 9090
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
