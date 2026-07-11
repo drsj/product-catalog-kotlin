@@ -7,7 +7,7 @@ import java.math.BigDecimal
 @Component
 class ExternalPriceClient(
     builder: WebClient.Builder,
-    props: ExternalPricingProperties
+    private val props: ExternalPricingProperties
 ) {
     private val client = builder.baseUrl(props.url).build()
 
@@ -21,5 +21,6 @@ class ExternalPriceClient(
             }
             .retrieve()
             .bodyToMono(ExternalPriceDto::class.java)
+            .timeout(props.timeout)
             .block()
 }

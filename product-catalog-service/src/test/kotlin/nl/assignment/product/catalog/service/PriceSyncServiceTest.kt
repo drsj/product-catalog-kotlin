@@ -8,7 +8,6 @@ import nl.assignment.product.catalog.repository.ProductRepository
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import java.math.BigDecimal
-import kotlin.test.assertTrue
 
 class PriceSyncServiceTest {
 
@@ -61,6 +60,20 @@ class PriceSyncServiceTest {
 
         every { productRepository.findAll() } returns products
         every { externalClient.getPrice(any(), any()) } returns null
+
+        service.syncPrices()
+
+        verify(inverse = true) { productService.updatePrice(any(), any()) }
+    }
+
+    @Test
+    fun `syncPrices should skip update when external client returns non-positive price`() {
+        val products = listOf(
+            Product(sku = "SKU1", name = "Product1", price = BigDecimal("10.00"), quantity = 5)
+        )
+
+        every { productRepository.findAll() } returns products
+        every { externalClient.getPrice(any(), any()) } returns ExternalPriceDto("SKU1", BigDecimal("-1.00"))
 
         service.syncPrices()
 

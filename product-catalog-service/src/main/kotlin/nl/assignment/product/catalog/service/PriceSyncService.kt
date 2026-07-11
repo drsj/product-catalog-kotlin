@@ -10,7 +10,7 @@ import nl.assignment.product.catalog.repository.ProductRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Transactional
+import java.math.BigDecimal
 
 @Service
 class PriceSyncService(
@@ -53,10 +53,14 @@ class PriceSyncService(
         }
     }
 
-    private fun syncPrice(sku: String, currentPrice: java.math.BigDecimal) {
+    private fun syncPrice(sku: String, currentPrice: BigDecimal) {
         val dto = externalClient.getPrice(sku, currentPrice)
-        if (dto?.price != null) {
-            productService.updatePrice(sku, dto.price)
+        val newPrice = dto?.price
+        if (newPrice == null || newPrice <= BigDecimal.ZERO) {
+            log.warn("Skipping invalid price {} for SKU {}", newPrice, sku)
+            return
         }
+
+        productService.updatePrice(sku, newPrice)
     }
 }
