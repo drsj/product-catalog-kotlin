@@ -75,16 +75,15 @@ class PriceSyncServiceTest {
         )
 
         every { productRepository.findAll() } returns products
-        every { externalClient.getPrice(any(), any()) } throws Exception("External service error")
-        every { productService.updatePrice(any(), any()) } just Runs
+        every { externalClient.getPrice("SKU1", any()) } throws Exception("External service error")
+        every { externalClient.getPrice("SKU2", any()) } returns ExternalPriceDto("SKU2", BigDecimal("21.00"))
+        every { productService.updatePrice("SKU2", BigDecimal("21.00")) } just Runs
 
-        try {
-            service.syncPrices()
-        } catch (e: Exception) {
-            // Expected - the service may throw or log the error
-        }
+        service.syncPrices()
 
-        verify(atLeast = 1) { externalClient.getPrice(any(), any()) }
+        verify { externalClient.getPrice("SKU1", BigDecimal("10.00")) }
+        verify { externalClient.getPrice("SKU2", BigDecimal("20.00")) }
+        verify { productService.updatePrice("SKU2", BigDecimal("21.00")) }
     }
 
     @Test

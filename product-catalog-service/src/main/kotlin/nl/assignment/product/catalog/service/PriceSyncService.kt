@@ -1,15 +1,16 @@
 package nl.assignment.product.catalog.service
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.supervisorScope
 import nl.assignment.product.catalog.integration.ExternalPriceClient
 import nl.assignment.product.catalog.repository.ProductRepository
 import org.slf4j.LoggerFactory
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import kotlin.coroutines.coroutineContext
 
 @Service
 class PriceSyncService(
@@ -28,10 +29,17 @@ class PriceSyncService(
         try {
             log.info("Starting price sync for ${products.size} products...")
 
-            runBlocking(Dispatchers.Default) {
-                products.forEach { product ->
-                    launch {
-                        syncPrice(product.sku, product.price)
+            runBlocking(Dispatchers.IO) {
+                supervisorScope {
+                    products.forEach { product ->
+                        launch {
+                            try {
+                                syncPrice(product.sku, product.price)
+                            } catch (e: Exception) {
+                                if (e is CancellationException) throw e
+                                log.error("Price sync failed for SKU {}", product.sku, e)
+                            }
+                        }
                     }
                 }
             }
