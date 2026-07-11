@@ -32,6 +32,13 @@ class PricingMockControllerTest {
         assertTrue(response.price <= maxExpected)
     }
 
+    @Test
+    fun `getPrice should return price with at most 2 decimal places`() {
+        val response = controller.getPrice("SKU1", BigDecimal("100.00"))
+
+        assertTrue(response.price.scale() <= 2)
+    }
+
     @RepeatedTest(10)
     fun `getPrice should vary prices for multiple calls`() {
         val basePrice = BigDecimal("50.00")

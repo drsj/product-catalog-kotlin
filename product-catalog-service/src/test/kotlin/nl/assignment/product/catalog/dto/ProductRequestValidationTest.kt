@@ -111,6 +111,21 @@ class ProductRequestValidationTest {
     }
 
     @Test
+    fun `ProductRequest with more than 2 decimal places should fail validation`() {
+        val request = ProductRequest(
+            sku = "SKU123",
+            name = "Product",
+            price = BigDecimal("10.123"),
+            quantity = 10
+        )
+
+        val violations = validator.validate(request)
+
+        assertEquals(1, violations.size)
+        assertTrue(violations.any { it.propertyPath.toString() == "price" })
+    }
+
+    @Test
     fun `ProductRequest with negative quantity should fail validation`() {
         val request = ProductRequest(
             sku = "SKU123",
