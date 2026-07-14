@@ -11,8 +11,10 @@ import org.junit.jupiter.api.assertThrows
 import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Sort
+import org.springframework.web.server.ResponseStatusException
 import java.math.BigDecimal
 import kotlin.test.assertEquals
+import tools.jackson.databind.ObjectMapper
 
 class ProductControllerTest {
 
@@ -152,5 +154,26 @@ class ProductControllerTest {
 
         assertEquals(200, result.statusCode.value())
         verify { productService.list(match { it.pageNumber == 2 && it.pageSize == 50 }) }
+    }
+
+    @Test
+    fun `update quantity should return bad request when delta is missing`() {
+        val ex = assertThrows<ResponseStatusException> {
+            controller.updateQuantity("APL-IPH-17", null, null)
+        }
+
+        assertEquals(400, ex.statusCode.value())
+        verify(exactly = 0) { productService.updateQuantity(any(), any()) }
+    }
+
+    @Test
+    fun `update quantity should use request body delta when provided`() {
+        every { productService.updateQuantity("APL-IPH-17", 5L) } returns Unit
+
+        val body = ObjectMapper().readTree("""{"quantity":5}""")
+        val result = controller.updateQuantity("APL-IPH-17", body, null)
+
+        assertEquals(204, result.statusCode.value())
+        verify { productService.updateQuantity("APL-IPH-17", 5L) }
     }
 }

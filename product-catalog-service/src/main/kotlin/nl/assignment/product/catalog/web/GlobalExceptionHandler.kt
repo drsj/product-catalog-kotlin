@@ -3,6 +3,7 @@ package nl.assignment.product.catalog.web
 import jakarta.persistence.EntityNotFoundException
 import nl.assignment.product.catalog.exception.QuantityUpdateException
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.dao.InvalidDataAccessApiUsageException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.ExceptionHandler
@@ -24,9 +25,8 @@ class GlobalExceptionHandler {
     fun handleQuantityUpdate(ex: QuantityUpdateException): ResponseEntity<String> =
         ResponseEntity.status(HttpStatus.CONFLICT).body(ex.message)
 
-    @ExceptionHandler(org.springframework.data.elasticsearch.NoSuchIndexException::class)
-    fun handleMissingIndex(ex: org.springframework.data.elasticsearch.NoSuchIndexException): ResponseEntity<String> =
-        ResponseEntity.status(HttpStatus.NOT_FOUND)
-            .body("Search index not found: ${ex.index}")
-
+    @ExceptionHandler(InvalidDataAccessApiUsageException::class)
+    fun handleInvalidSearch(ex: InvalidDataAccessApiUsageException): ResponseEntity<String> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body("Invalid search query: ${ex.message}")
 }

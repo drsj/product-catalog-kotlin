@@ -2,9 +2,11 @@ package nl.assignment.product.catalog.bootstrap
 
 import nl.assignment.product.catalog.domain.Product
 import nl.assignment.product.catalog.repository.ProductRepository
+import nl.assignment.product.catalog.search.ProductIndexEvent
 import nl.assignment.product.catalog.util.ProductUtil
 import org.slf4j.LoggerFactory
 import org.springframework.boot.CommandLineRunner
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
 import java.math.BigDecimal
@@ -13,7 +15,8 @@ import kotlin.random.Random
 
 @Component
 class ProductSeeder(
-    private val productRepository: ProductRepository
+    private val productRepository: ProductRepository,
+    private val eventPublisher: ApplicationEventPublisher
 ) : CommandLineRunner {
 
     private val logger = LoggerFactory.getLogger(ProductSeeder::class.java)
@@ -24,13 +27,19 @@ class ProductSeeder(
 
         if (count > 0) {
             logger.info("Skipping product seeding: $count products already exist")
+            productRepository.findAll().forEach { product ->
+                eventPublisher.publishEvent(ProductIndexEvent(product))
+            }
             return
         }
 
         logger.info("Seeding 1000 products...")
         val products = (1..1000).map { generateRealisticProduct(it) }
 
-        productRepository.saveAll(products)
+        val savedProducts = productRepository.saveAll(products)
+        savedProducts.forEach { product ->
+            eventPublisher.publishEvent(ProductIndexEvent(product))
+        }
         logger.info("Successfully seeded ${products.size} products")
     }
 

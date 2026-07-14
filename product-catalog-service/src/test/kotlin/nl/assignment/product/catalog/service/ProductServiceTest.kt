@@ -7,7 +7,7 @@ import nl.assignment.product.catalog.exception.QuantityUpdateException
 import nl.assignment.product.catalog.repository.ProductRepository
 import nl.assignment.product.catalog.search.ProductDeleteEvent
 import nl.assignment.product.catalog.search.ProductIndexEvent
-import nl.assignment.product.catalog.search.ProductSearchRepository
+import co.elastic.clients.elasticsearch.ElasticsearchClient
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -23,16 +23,16 @@ import kotlin.test.assertTrue
 class ProductServiceTest {
 
     private lateinit var productRepository: ProductRepository
-    private lateinit var productSearchRepository: ProductSearchRepository
     private lateinit var eventPublisher: ApplicationEventPublisher
+    private lateinit var es: ElasticsearchClient
     private lateinit var service: ProductService
 
     @BeforeEach
     fun setup() {
         productRepository = mockk()
-        productSearchRepository = mockk()
         eventPublisher = mockk(relaxed = true)
-        service = ProductService(productRepository, productSearchRepository, eventPublisher)
+        es = mockk(relaxed = true)   // DSL-client mock
+        service = ProductService(productRepository, eventPublisher, es)
     }
 
     // ============== CREATE TESTS ==============
@@ -120,7 +120,7 @@ class ProductServiceTest {
 
         service.updateQuantity("SKU123", 5)
 
-        verify { productRepository.save(match { it.quantity == 15L }) }
+        verify { productRepository.save(match { it.quantity == 15.toLong() }) }
         verify { eventPublisher.publishEvent(any<ProductIndexEvent>()) }
     }
 
@@ -140,7 +140,7 @@ class ProductServiceTest {
 
         service.updateQuantity("SKU123", -3)
 
-        verify { productRepository.save(match { it.quantity == 7L }) }
+        verify { productRepository.save(match { it.quantity == 7.toLong() }) }
     }
 
     @Test
@@ -178,7 +178,7 @@ class ProductServiceTest {
 
         service.updateQuantity("SKU123", -10)
 
-        verify { productRepository.save(match { it.quantity == 0L }) }
+        verify { productRepository.save(match { it.quantity == 0.toLong() }) }
     }
 
     @Test
@@ -212,7 +212,14 @@ class ProductServiceTest {
 
         service.updatePrice("SKU123", BigDecimal("75.00"))
 
-        verify { productRepository.save(match { it.price == BigDecimal("75.00") && it.lastSyncedAt != null }) }
+        verify {
+            productRepository.save(
+                match {
+                    it.price == BigDecimal("75.00") &&
+                            it.lastSyncedAt != null
+                }
+            )
+        }
         verify { eventPublisher.publishEvent(any<ProductIndexEvent>()) }
     }
 

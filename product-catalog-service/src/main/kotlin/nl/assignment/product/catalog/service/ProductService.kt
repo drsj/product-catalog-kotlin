@@ -1,12 +1,13 @@
 package nl.assignment.product.catalog.service
 
 
+import co.elastic.clients.elasticsearch.ElasticsearchClient
+import nl.assignment.product.catalog.search.ProductDocument
 import jakarta.persistence.EntityNotFoundException
 import nl.assignment.product.catalog.domain.toResponse
 import nl.assignment.product.catalog.dto.ProductResponse
 import nl.assignment.product.catalog.dto.ProductSearchResponse
 import nl.assignment.product.catalog.repository.ProductRepository
-import nl.assignment.product.catalog.search.ProductSearchRepository
 import nl.assignment.product.catalog.domain.Product
 import nl.assignment.product.catalog.exception.QuantityUpdateException
 import nl.assignment.product.catalog.search.ProductDeleteEvent
@@ -23,8 +24,8 @@ import java.time.Instant
 @Service
 class ProductService(
     private val productRepository: ProductRepository,
-    private val productSearchRepository: ProductSearchRepository,
-    private val eventPublisher: ApplicationEventPublisher
+    private val eventPublisher: ApplicationEventPublisher,
+    private val es: ElasticsearchClient
 ) {
 
     @Transactional
@@ -105,13 +106,30 @@ class ProductService(
         eventPublisher.publishEvent(ProductDeleteEvent(sku))
     }
 
-    @Transactional()
+    @Transactional(readOnly = true)
     fun search(query: String, pageable: Pageable): Page<ProductSearchResponse> {
-        val page = productSearchRepository.findByNameContainingIgnoreCase(query, pageable)
 
-        return page.map { doc ->
+        val response = es.search<ProductDocument>({ s ->
+            s.index("products")
+                .query { q ->
+                    q.multiMatch { mm ->
+                        mm.query(query)
+                            .fields("name", "description", "brand", "category")
+                            .type(co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType.BestFields)
+                            .fuzziness("AUTO")
+                    }
+                }
+                .from(pageable.offset.toInt())
+                .size(pageable.pageSize)
+        }, ProductDocument::class.java)
+
+
+        val hits = response.hits().hits()
+
+        val content = hits.map { hit ->
+            val doc = hit.source()
             ProductSearchResponse(
-                sku = doc.sku,
+                sku = doc!!.sku,
                 name = doc.name,
                 description = doc.description,
                 brand = doc.brand,
@@ -119,8 +137,14 @@ class ProductService(
                 price = doc.price,
                 quantity = doc.quantity,
                 currency = doc.currency,
-                score = null
+                score = hit.score()?.toFloat()
             )
         }
+
+        return org.springframework.data.domain.PageImpl(
+            content,
+            pageable,
+            response.hits().total()?.value() ?: content.size.toLong()
+        )
     }
 }

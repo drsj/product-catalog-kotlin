@@ -7,7 +7,6 @@ import nl.assignment.product.catalog.service.ProductService
 import nl.assignment.product.catalog.dto.ProductRequest
 import nl.assignment.product.catalog.dto.ProductResponse
 import nl.assignment.product.catalog.dto.ProductSearchResponse
-import nl.assignment.product.catalog.dto.UpdateQuantityRequest
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
@@ -17,6 +16,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.server.ResponseStatusException
+import tools.jackson.databind.JsonNode
 
 @Validated
 @RestController
@@ -46,15 +47,21 @@ class ProductController(
      *
      * - Uses PATCH because this is a partial update.
      * - Identifies the product by its SKU.
+     * - Accepts delta either as JSON body or query parameter.
      * - Delegates the update to the ProductService.
      * - Returns HTTP 204 (No Content).
      */
     @PatchMapping("/{sku}/quantity")
     fun updateQuantity(
         @PathVariable sku: String,
-        @RequestBody @Valid request: UpdateQuantityRequest
+        @RequestBody(required = false) body: JsonNode?,
+        @RequestParam(required = false) delta: Long?
     ): ResponseEntity<Void> {
-        service.updateQuantity(sku, request.delta)
+        val resolvedDelta = delta
+            ?: body?.get("delta")?.longValue()
+            ?: body?.get("quantity")?.longValue()
+            ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Delta is required")
+        service.updateQuantity(sku, resolvedDelta)
         return ResponseEntity.noContent().build()
     }
 

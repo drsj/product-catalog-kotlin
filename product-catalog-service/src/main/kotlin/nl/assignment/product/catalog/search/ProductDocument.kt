@@ -1,18 +1,26 @@
 package nl.assignment.product.catalog.search
 
+import com.fasterxml.jackson.annotation.JsonCreator
+import com.fasterxml.jackson.annotation.JsonProperty
 import org.springframework.data.annotation.Id
-import org.springframework.data.elasticsearch.annotations.Document
 import java.math.BigDecimal
 
-@Document(indexName = "products", createIndex = false)
-data class ProductDocument(
+data class ProductDocument @JsonCreator constructor(
+    @JsonProperty("sku")
     @Id
     val sku: String,
+    @JsonProperty("name")
     val name: String,
+    @JsonProperty("description")
     val description: String?,
+    @JsonProperty("brand")
     val brand: String?,
+    @JsonProperty("category")
     val category: String?,
+    @JsonProperty("price")
     val price: BigDecimal,
+    @JsonProperty("quantity")
     val quantity: Long,
+    @JsonProperty("currency")
     val currency: String?
 )
