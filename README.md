@@ -1,4 +1,4 @@
-# Product Deployment
+# Product Catalog
 
 A Spring Boot microservices application for product catalog management with pricing integration, built with Kotlin and containerized with Docker.
 
