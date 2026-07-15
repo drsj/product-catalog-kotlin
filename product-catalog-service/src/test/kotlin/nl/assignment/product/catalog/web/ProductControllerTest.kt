@@ -170,7 +170,7 @@ class ProductControllerTest {
     fun `update quantity should use request body delta when provided`() {
         every { productService.updateQuantity("APL-IPH-17", 5L) } returns Unit
 
-        val body = ObjectMapper().readTree("""{"quantity":5}""")
+        val body = ProductController.QuantityDeltaRequest(delta = 5)
         val result = controller.updateQuantity("APL-IPH-17", body, null)
 
         assertEquals(204, result.statusCode.value())

@@ -42,28 +42,40 @@ class ProductController(
         return ResponseEntity.status(HttpStatus.CREATED).body(created)
     }
 
+    data class QuantityDeltaRequest(
+        val delta: Long
+    )
+
     /**
      * Update only the quantity of an existing product.
      *
      * - Uses PATCH because this is a partial update.
      * - Identifies the product by its SKU.
-     * - Accepts delta either as JSON body or query parameter.
-     * - Delegates the update to the ProductService.
-     * - Returns HTTP 204 (No Content).
+     * - Accepts the quantity delta either as a query parameter or as JSON body.
+     * - Delegates the update logic to the ProductService.
+     * - Returns HTTP 200 with a confirmation message.
      */
     @PatchMapping("/{sku}/quantity")
     fun updateQuantity(
         @PathVariable sku: String,
-        @RequestBody(required = false) body: JsonNode?,
+        @RequestBody(required = false) body: QuantityDeltaRequest?,
         @RequestParam(required = false) delta: Long?
-    ): ResponseEntity<Void> {
-        val resolvedDelta = delta
-            ?: body?.get("delta")?.longValue()
-            ?: body?.get("quantity")?.longValue()
-            ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Delta is required")
+    ): ResponseEntity<Map<String, String>> {
+
+        val resolvedDelta = delta ?: body?.delta
+        ?: throw ResponseStatusException(HttpStatus.BAD_REQUEST, "delta is required")
+
         service.updateQuantity(sku, resolvedDelta)
-        return ResponseEntity.noContent().build()
+
+        val response = mapOf(
+            "message" to "Product quantity successfully updated",
+            "sku" to sku,
+            "delta" to resolvedDelta.toString()
+        )
+
+        return ResponseEntity.ok(response)
     }
+
 
     /**
      * Retrieve a single product by its SKU.
